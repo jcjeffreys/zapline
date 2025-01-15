@@ -41,17 +41,10 @@ segment_content() {
 # Helper function for User segment - also used in external ssh segment
 ip_address() {
     local ip_address
-    local ip_loc
     local ifconfig_loc
 
-    if ip_loc="$(type -p "ip")" || [[ -n $ip_loc ]]; then
-        ip_address="$(ip route get 1 | tr -s ' ' | cut -d' ' -f7)"
-    elif ifconfig_loc="$(type -p "ifconfig")" || [[ -n $ifconfig_loc ]]; then
-        while IFS=$': \t' read -ra _line ;do
-            [ -z "${_line%inet}"   ] &&
-                _ip=${_line[${#_line[1]}>4?1:2]} &&
-                [ "${_ip#127.0.0.1}"   ] && ip_address=$_ip
-        done< <(LANG=C /sbin/ifconfig)
+    if ifconfig_loc="$(command -v ifconfig)"; then
+        ip_address=$(ifconfig | awk '/inet / && !/127.0.0.1/ {print $2; exit}')
     else
         ip_address="127.0.0.1"
     fi
@@ -202,7 +195,7 @@ return_code_segment() {
     if [[ ! "$__return_code" -eq 0 ]]; then
         local bg_color="$1"
         local fg_color="$2"
-        local content=" ${ZL_SYMBOLS[return_code]}$__return_code "
+        local content=" ${ZL_SYMBOLS[return_code]} $__return_code "
         PS1+=$(segment_end "$fg_color" "$bg_color")
         PS1+=$(segment_content "$fg_color" "$bg_color" "$content")
         __last_color="$bg_color"
@@ -244,7 +237,7 @@ __zapline_post() {
 
     # final end point
     if (( ${#ZL_SEGMENTS[@]} > 0 )); then
-        PS1+=$(segment_end "$__last_color" 'Default')
+        PS1+="$(segment_end "$__last_color" 'Default') "
     else
         # No segments loaded, set a basic prompt
         PS1="ZL | No segments Loaded: %# "
@@ -264,11 +257,11 @@ __zapline_post() {
 # symbols from code page 437: character set of the original IBM PC
 set_default_symbols() {
     ZL_SYMBOLS=(
-        [hard_separator]="▶"
+        [hard_separator]=""
         [soft_separator]="│"
         [read_only]="Θ"
-        [return_code]="x"
-        [background_jobs]="↔"
+        [return_code]="→"
+        [background_jobs]="≡"
     )
 }
 

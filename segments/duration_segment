@@ -5,7 +5,7 @@
 
 # Set default symbols if not already defined in config
 # Defaults should be standard symbols.
-[[ -z ${ZL_SYMBOLS[duration]}  ]] && ZL_SYMBOLS[duration]='⧗'
+[[ -z ${ZL_SYMBOLS[duration]}  ]] && ZL_SYMBOLS[duration]='▲'
 
 # -----------------------------------------------------------------------------
 # return the current time in nanoseconds
@@ -47,7 +47,7 @@ duration_segment() {
     local bg_color="$1"
     local fg_color="$2"
     timer_stop
-    local content=" ${ZL_SYMBOLS[duration]}${duration}"
+    local content=" ${ZL_SYMBOLS[duration]} ${duration}"
     PS1+="$(segment_end "$fg_color" "$bg_color")"
     PS1+="$(segment_content "$fg_color" "$bg_color" "$content ")"
     __last_color="$bg_color"

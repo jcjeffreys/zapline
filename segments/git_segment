@@ -25,7 +25,7 @@
 #   ZL_GIT_CONFLICTS: true/false
 #   ZL_GIT_MODIFIED: true/false
 #   ZL_GIT_UNTRACKED: true/false
-function git_segment {
+git_segment() {
     local git_branch
     which git >/dev/null 2>&1 || return;  ## return if no git
 

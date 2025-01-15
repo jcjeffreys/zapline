@@ -5,7 +5,7 @@
 # Set default symbols if not already defined in config
 # Defaults should be standard symbols.
 [[ -z ${ZL_SYMBOLS[pwd_separator]} ]] && ZL_SYMBOLS[pwd_separator]=${ZL_SYMBOLS[soft_separator]}
-[[ -z ${ZL_SYMBOLS[pwd_trimmed]} ]] && ZL_SYMBOLS[pwd_trimmed]=''
+[[ -z ${ZL_SYMBOLS[pwd_trimmed]} ]] && ZL_SYMBOLS[pwd_trimmed]='...'
 
 # -----------------------------------------------------------------------------
 # append to prompt: current directory
@@ -13,7 +13,7 @@
 # arg: $2 foreground color
 # option variables;
 #   ZL_PATH_TRIM: 0—fullpath, 1—current dir, [x]—trim to x number of dir
-function pwd_segment {
+pwd_segment() {
     local bg_color="$1"
     local fg_color="$2"
     local content="${PWD/#$HOME/~}" # works for zsh
