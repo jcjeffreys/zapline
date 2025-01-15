@@ -1,0 +1,54 @@
+#!/usr/bin/env zsh
+
+# duration_segment
+# show the time spent on the last command executed
+
+# Set default symbols if not already defined in config
+# Defaults should be standard symbols.
+[[ -z ${ZL_SYMBOLS[duration]}  ]] && ZL_SYMBOLS[duration]='⧗'
+
+# -----------------------------------------------------------------------------
+# return the current time in nanoseconds
+timer_now() {
+    echo $(( $(date +%s) * 1000000000 + $(date +%N) ))
+}
+
+# -----------------------------------------------------------------------------
+# use preexec to start the timer before the next command
+preexec() {
+    timer_start=$(timer_now)
+}
+
+# -----------------------------------------------------------------------------
+# stop the timer and format output for duration
+# the stop is triggered by (and called from) the segment when PS1 is built.
+timer_stop() {
+    local delta_us=$((($(timer_now) - timer_start) / 1000))
+    local us=$((delta_us % 1000))
+    local ms=$(((delta_us / 1000) % 1000))
+    local s=$(((delta_us / 1000000) % 60))
+    local m=$(((delta_us / 60000000) % 60))
+    local h=$((delta_us / 3600000000))
+    if   ((h > 0));     then duration=${h}h${m}m
+    elif ((m > 0));     then duration=${m}m${s}s
+    elif ((s >= 10));   then duration=${s}.$((ms / 100))s
+    elif ((s > 0));     then duration=${s}.$(printf %03d $ms)s
+    elif ((ms >= 100)); then duration=${ms}ms
+    elif ((ms > 0));    then duration=${ms}.$((us / 100))ms
+    else duration=${us}us
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# append to prompt: indicator for time spent in the last cmd
+# arg: $1 background color
+# arg: $2 foreground color
+duration_segment() {
+    local bg_color="$1"
+    local fg_color="$2"
+    timer_stop
+    local content=" ${ZL_SYMBOLS[duration]}${duration}"
+    PS1+="$(segment_end "$fg_color" "$bg_color")"
+    PS1+="$(segment_content "$fg_color" "$bg_color" "$content ")"
+    __last_color="$bg_color"
+}

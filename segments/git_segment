@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+
+# git_segment
+
+# Set default symbols if not already defined in config
+# Defaults should be standard symbols.
+[[ -z ${ZL_SYMBOLS[git_branch]} ]] && ZL_SYMBOLS[git_branch]="╬" 
+[[ -z ${ZL_SYMBOLS[git_untracked]} ]] && ZL_SYMBOLS[git_untracked]="?"
+[[ -z ${ZL_SYMBOLS[git_stash]} ]] && ZL_SYMBOLS[git_stash]="§"
+[[ -z ${ZL_SYMBOLS[git_ahead]} ]] && ZL_SYMBOLS[git_ahead]="↑"
+[[ -z ${ZL_SYMBOLS[git_behind]} ]] && ZL_SYMBOLS[git_behind]="↓"
+[[ -z ${ZL_SYMBOLS[git_modified]} ]] && ZL_SYMBOLS[git_modified]="+"
+[[ -z ${ZL_SYMBOLS[git_staged]} ]] && ZL_SYMBOLS[git_staged]="•"
+[[ -z ${ZL_SYMBOLS[git_conflicts]} ]] && ZL_SYMBOLS[git_conflicts]="*"
+
+# -----------------------------------------------------------------------------
+# append to prompt: git branch with indicators for;
+#     number of; modified files, staged files and conflicts
+# arg: $1 background color
+# arg: $2 foreground color
+# option variables;
+#   ZL_GIT_STASH: true/false
+#   ZL_GIT_AHEAD: true/false
+#   ZL_GIT_STAGED: true/false
+#   ZL_GIT_CONFLICTS: true/false
+#   ZL_GIT_MODIFIED: true/false
+#   ZL_GIT_UNTRACKED: true/false
+function git_segment {
+    local git_branch
+    which git >/dev/null 2>&1 || return;  ## return if no git
+
+    git_branch=$(git rev-parse --abbrev-ref HEAD 2> /dev/null)
+    
+    [[ -z $git_branch  ]] && return;  ## return early if not a git branch
+
+    local bg_color="$1"
+    local fg_color="$2"
+    local content="${ZL_SYMBOLS[git_branch]} $git_branch"
+
+    if [ "$ZL_GIT_STASH" = true ]; then
+        local number_stash
+        number_stash="$(git stash list 2>/dev/null | grep -F -v -c 'fatal:' | tr -d '[:space:]')"
+        if [ ! "$number_stash" -eq 0 ]; then
+            content+=" ${ZL_SYMBOLS[soft_separator]} ${ZL_SYMBOLS[git_stash]}$number_stash"
+        fi
+    fi
+
+    if [ "$ZL_GIT_AHEAD" = true ]; then
+        local number_behind_ahead
+        number_behind_ahead="$(git rev-list --count --left-right '@{upstream}...HEAD' 2>/dev/null)"
+        local number_ahead="${number_behind_ahead#*	}"
+        local number_behind="${number_behind_ahead%	*}"
+        if [ ! "0$number_ahead" -eq 0 ] || [ ! "0$number_behind" -eq 0 ]; then
+            if [ ! "$number_ahead" -eq 0 ]; then
+                content+=" ${ZL_SYMBOLS[soft_separator]} ${ZL_SYMBOLS[git_ahead]}$number_ahead"
+            fi
+            if [ ! "$number_behind" -eq 0 ]; then
+                content+=" ${ZL_SYMBOLS[soft_separator]} ${ZL_SYMBOLS[git_behind]}$number_behind"
+            fi
+        fi
+    fi
+
+    if [ "$ZL_GIT_STAGED" = true ]; then
+        local number_staged
+        number_staged="$(git diff --staged --name-only --diff-filter=AM 2> /dev/null | wc -l | tr -d '[:space:]')"
+        if [ ! "$number_staged" -eq "0" ]; then
+            content+=" ${ZL_SYMBOLS[soft_separator]} ${ZL_SYMBOLS[git_staged]}$number_staged"
+        fi
+    fi
+
+    if [ "$ZL_GIT_CONFLICTS" = true ]; then
+        local number_conflicts
+        number_conflicts="$(git diff --name-only --diff-filter=U 2> /dev/null | wc -l | tr -d '[:space:]')"
+        if [ ! "$number_conflicts" -eq "0" ]; then
+            content+=" ${ZL_SYMBOLS[soft_separator]} ${ZL_SYMBOLS[git_conflicts]}$number_conflicts"
+        fi
+    fi
+
+    if [ "$ZL_GIT_MODIFIED" = true ]; then
+        local number_modified
+        number_modified="$(git diff --name-only --diff-filter=M 2> /dev/null | wc -l | tr -d '[:space:]')"
+        if [ ! "$number_modified" -eq "0" ]; then
+            content+=" ${ZL_SYMBOLS[soft_separator]} ${ZL_SYMBOLS[git_modified]}$number_modified"
+        fi
+    fi
+
+    if [ "$ZL_GIT_UNTRACKED" = true ]; then
+        local number_untracked
+        number_untracked="$(git ls-files --other --exclude-standard 2> /dev/null | wc -l | tr -d '[:space:]')"
+        if [ ! "$number_untracked" -eq "0" ]; then
+            content+=" ${ZL_SYMBOLS[soft_separator]} ${ZL_SYMBOLS[git_untracked]}$number_untracked"
+        fi
+    fi
+
+    if [ -n "$(git status --porcelain 2> /dev/null)" ]; then
+        if [ -n "$ZL_GIT_DIRTY_FG" ]; then
+            fg_color="$ZL_GIT_DIRTY_FG"
+        fi
+        if [ -n "$ZL_GIT_DIRTY_BG" ]; then
+            bg_color="$ZL_GIT_DIRTY_BG"
+        fi
+    fi
+
+    PS1+="$(segment_end "$fg_color" "$bg_color")"
+    PS1+="$(segment_content "$fg_color" "$bg_color" " $content ")"
+    __last_color="$bg_color"
+}

@@ -1,0 +1,42 @@
+#!/usr/bin/env zsh
+
+# pwd_segment
+
+# Set default symbols if not already defined in config
+# Defaults should be standard symbols.
+[[ -z ${ZL_SYMBOLS[pwd_separator]} ]] && ZL_SYMBOLS[pwd_separator]=${ZL_SYMBOLS[soft_separator]}
+[[ -z ${ZL_SYMBOLS[pwd_trimmed]} ]] && ZL_SYMBOLS[pwd_trimmed]=''
+
+# -----------------------------------------------------------------------------
+# append to prompt: current directory
+# arg: $1 background color
+# arg: $2 foreground color
+# option variables;
+#   ZL_PATH_TRIM: 0—fullpath, 1—current dir, [x]—trim to x number of dir
+function pwd_segment {
+    local bg_color="$1"
+    local fg_color="$2"
+    local content="${PWD/#$HOME/~}" # works for zsh
+    if [[ "$ZL_PATH_TRIM" -eq 1 ]]; then
+        content="${content##*/}"
+    elif [[ "$ZL_PATH_TRIM" -gt 1 ]]; then
+        local re=")$"
+        local ree="\/[^\/]*"
+        for (( i = 0; i < $ZL_PATH_TRIM; i++ )); do
+            re="$ree$re"
+        done
+        re="($re"
+        if [[ $content =~ $re ]]; then
+            local ret=${match[1]}
+            if [[ ${#ret} -gt 0 ]]; then
+                content="${ZL_SYMBOLS[pwd_trimmed]}$ret"
+            fi
+        fi
+    fi
+    content="${content//\// ${ZL_SYMBOLS[pwd_separator]} }"
+    if [[ "${content:0:2}" == " ${ZL_SYMBOLS[pwd_separator]}" ]]; then content="/$content"; fi
+    if [[ "${content: -2}" == "${ZL_SYMBOLS[pwd_separator]} " ]]; then content=${content%%???}; fi
+    PS1+="$(segment_end "$fg_color" "$bg_color")"
+    PS1+="$(segment_content "$fg_color" "$bg_color" " $content ")"
+    __last_color="$bg_color"
+}

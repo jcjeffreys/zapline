@@ -1,0 +1,32 @@
+#!/usr/bin/env zsh
+
+# ssh_segment
+
+# Set default symbols if not already defined in config
+# Defaults should be standard symbols.
+[[ -z ${ZL_SYMBOLS[ssh]} ]] && ZL_SYMBOLS[ssh]='╤'
+
+# -----------------------------------------------------------------------------
+# append to prompt: indicate if SSH session
+# arg: $1 foreground color
+# arg: $2 background color
+# option variables;
+#   PL_SSH_SHOW_HOST: true/false to show host name/ip
+#   PL_SSH_USE_IP: true/false to show IP instead of hostname
+function ssh_segment {
+    if [[ -n "${SSH_CLIENT}" || -n "${SSH_TTY}" ]]; then
+        local bg_color="$1"
+        local fg_color="$2"
+        local content="${ZL_SYMBOLS[ssh]}"
+        if [[ "$ZL_SSH_SHOW_HOST" == true ]]; then
+            if [[ "$ZL_SSH_USE_IP" == true ]]; then
+                content+=" $(ip_address)"
+            else
+                content+=" %m"
+            fi
+        fi
+        PS1+="$(segment_end "$fg_color" "$bg_color")"
+        PS1+="$(segment_content "$fg_color" "$bg_color" " $content ")"
+        __last_color="$bg_color"
+    fi
+}
