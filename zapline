@@ -123,11 +123,10 @@ path_segment() {
 background_jobs_segment() {
     local bg_color="$1"
     local fg_color="$2"
-    local number_jobs
-    number_jobs=$(jobs -p | wc -l | tr -d '[:space:]')
+    local number_jobs=$(jobs -r | wc -l | tr -d '[:space:]')
     if [[ ! "$number_jobs" -eq 0 ]]; then
         PS1+=$(segment_end "$fg_color" "$bg_color")
-        PS1+=$(segment_content "$fg_color" "$bg_color" " ${ZL_SYMBOLS[background_jobs]}$number_jobs ")
+        PS1+=$(segment_content "$fg_color" "$bg_color" " ${ZL_SYMBOLS[background_jobs]} $number_jobs ")
         __last_color="$bg_color"
     fi
 }
@@ -214,23 +213,24 @@ newline_segment() {
 
 # -----------------------------------------------------------------------------
 # code to run before processing the inherited $PROMPT_COMMAND
-__zapline_pre() {
-    __return_code=$?                    # save return code of last command
-
-    if [[ -n $ZL_TITLEBAR ]]; then
-        print -Pn "\e]2;${ZL_TITLEBAR}\a"  # set the gui window title
-    fi
-
-    return $__return_code  # forward it to the inherited $PROMPT_COMMAND
+__zapline_preexec() {
+    __last_command=$1 # save the last command
 }
 
 # -----------------------------------------------------------------------------
 # code to run after processing the inherited $PROMPT_COMMAND
-__zapline_post() {
-    local segment_index
+__zapline_precmd() {
+    __return_code=$?  # save return code of last command
+
+    # Update terminal title
+    if [[ -n $ZL_TITLEBAR ]]; then
+        print -Pn "\e]2;${ZL_TITLEBAR}\a"
+    fi
+
     PS1=""  # reset the command prompt
 
     # load the segments
+    local segment_index
     for segment_index in {1..${#ZL_SEGMENTS[@]}}; do
         eval "${ZL_SEGMENTS[$segment_index]}"
     done
@@ -278,6 +278,17 @@ set_default_segments() {
 }
 
 # -----------------------------------------------------------------------------
+# function to update the prompt when a background job changes state
+TRAPCHLD() {
+    __zapline_precmd
+    
+    # reset the prompt only if ZLE is active
+    if [[ -o interactive ]]; then
+        zle && zle reset-prompt
+    fi
+}
+
+# -----------------------------------------------------------------------------
 # entry point to setup zapline
 main() {
     set_default_symbols
@@ -294,8 +305,8 @@ main() {
 
     # dynamically set the PS1 using zsh hooks
     autoload -Uz add-zsh-hook
-    add-zsh-hook precmd __zapline_post
-    add-zsh-hook preexec __zapline_pre
+    add-zsh-hook preexec __zapline_preexec
+    add-zsh-hook precmd __zapline_precmd
 }
 
 main "$@"
