@@ -1,7 +1,7 @@
 Zapline - A pure Zsh Powerline PS1 command prompt
 =================================================
 
-Test
+![alt text](image.png)
 
 Zapline is a [Powerline](https://github.com/powerline/powerline)-style prompt for the Zsh shell written in Zsh script. It aims to provide an attractive and functional prompt that requires minimal setup and dependencies.
 
